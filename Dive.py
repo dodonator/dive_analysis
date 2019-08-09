@@ -10,6 +10,7 @@ class Dive():
             path = Path(path)
         assert path.exists()
         self.path = path
+        self._data = None
 
         with path.open() as csv_file:
             reader = csv.reader(csv_file, delimiter=",")
@@ -29,7 +30,10 @@ class Dive():
         self.deco_stop_missed = meta_data["Deco stop missed [Y|N]"] == "Y"
 
 
-    def load_dive_data(self):
+    @property
+    def data(self):
+        if self._data is not None:
+            return self._data
         data = []
         with self.path.open() as file:
             # ignore meta data
@@ -41,21 +45,27 @@ class Dive():
                 row["Depth [m]"] = float(row["Depth [m]"])
                 row["Temperature [°C]"] = float(row["Temperature [°C]"])
                 data.append(row)
-        self.data = data
+        self._data = data
+        return data
 
 
     def average_depth(self):
-        if not hasattr(self, "data"):
-            self.load_dive_data()
-        
         depth_data = [float(d["Depth [m]"]) for d in self.data]
         average_depth = round(sum(depth_data) / len(depth_data), 2)
         return average_depth
 
 
+    def depth_data(self):
+        depth = [d["Depth [m]"] for d in self.data]
+        return depth
+
+
+    def temp_data(self):
+        temp = [d["Temperature [°C]"] for d in self.data]
+        return temp
+
+
     def splice_depth(self, n=12):
-        if not hasattr(self, "data"):
-            self.load_dive_data()
         depth = [d["Depth [m]"] for d in self.data]
         averages = []
         for piece in self._split(depth, n):
@@ -75,8 +85,6 @@ class Dive():
 
 
     def __iter__(self):
-        if not hasattr(self, "data"):
-            self.load_dive_data()
         for d in self.data:
             yield d
 
