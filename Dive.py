@@ -1,6 +1,7 @@
 import datetime
 import csv
 from pathlib import Path
+from itertools import islice
 
 class Dive():
     
@@ -52,6 +53,17 @@ class Dive():
         return average_depth
 
 
+    def splice_depth(self, n=12):
+        if not hasattr(self, "data"):
+            self.load_dive_data()
+        depth = [d["Depth [m]"] for d in self.data]
+        averages = []
+        for piece in self._split(depth, n):
+            tmp = round(sum(piece) / len(piece), 2)
+            averages.append(tmp)
+        return averages
+
+
     def __repr__(self):
         return f"""Dive:
     Date: {self.date}
@@ -63,6 +75,8 @@ class Dive():
 
 
     def __iter__(self):
+        if not hasattr(self, "data"):
+            self.load_dive_data()
         for d in self.data:
             yield d
 
@@ -97,3 +111,11 @@ class Dive():
         m, s = tuple(map(int, dive_time_str.split(":")))
         dive_time = datetime.timedelta(minutes=m, seconds=s)
         return dive_time
+
+    
+    def _split(self, iterable, n):
+        i = iter(iterable)
+        piece = list(islice(i, n))
+        while piece:
+            yield piece
+            piece = list(islice(i, n))
